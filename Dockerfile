@@ -14,13 +14,28 @@ LABEL maintainer="UC San Diego ITS/ETS <ets-consult@ucsd.edu>"
 USER root
 
 RUN apt-get -y install htop
+RUN apt-get -y update && \
+    apt-get install -y --no-install-recommends build-essential git nano rsync vim tree curl \
+    wget unzip htop tmux xvfb patchelf ca-certificates bash-completion libjpeg-dev libpng-dev \
+    ffmpeg cmake swig libssl-dev libcurl4-openssl-dev libopenmpi-dev python3-dev zlib1g-dev \
+    qtbase5-dev qtdeclarative5-dev libglib2.0-0 libglu1-mesa-dev libgl1-mesa-dev libvulkan1 \
+    libgl1-mesa-glx libosmesa6 libosmesa6-dev libglew-dev mesa-utils && \
+    apt-get clean && \
+    apt-get autoremove -y && \
+    rm -rf /var/lib/apt/lists/* && \
+    mkdir /root/.ssh
 
-# 3) install packages using notebook user
-USER jovyan
+# environment variables
+ENV MUJOCO_GL egl
+ENV MS2_ASSET_DIR /root/data
+ENV LD_LIBRARY_PATH /root/.mujoco/mujoco210/bin:${LD_LIBRARY_PATH}
 
-# RUN conda install -y scikit-learn
-
-RUN pip install --no-cache-dir networkx scipy
-
-# Override command to disable running jupyter notebook at launch
-# CMD ["/bin/bash"]
+# mujoco (required for metaworld)
+RUN mkdir -p /home/xiw159/.mujoco && \
+    wget https://www.tdmpc2.com/files/mjkey.txt && \
+    wget https://github.com/deepmind/mujoco/releases/download/2.1.0/mujoco210-linux-x86_64.tar.gz && \
+    tar -xzf mujoco210-linux-x86_64.tar.gz && \
+    rm mujoco210-linux-x86_64.tar.gz && \
+    mv mujoco210 /root/.mujoco/mujoco210 && \
+    mv mjkey.txt /root/.mujoco/mjkey.txt && \
+    python -c "import mujoco_py"
