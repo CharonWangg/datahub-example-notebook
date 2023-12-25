@@ -60,16 +60,15 @@ ENV PATH=${PATH}:/usr/local/nvidia/bin:/opt/conda/bin
 #ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/conda/lib/python3.9/site-packages/nvidia/cudnn/lib
 
 # packages
-RUN apt-get -y update && \
-    apt-get install -y --no-install-recommends build-essential git nano rsync vim tree curl \
-    wget unzip htop tmux xvfb patchelf ca-certificates bash-completion libjpeg-dev libpng-dev \
-    ffmpeg cmake swig libssl-dev libcurl4-openssl-dev libopenmpi-dev python3-dev zlib1g-dev \
-    qtbase5-dev qtdeclarative5-dev libglib2.0-0 libglu1-mesa-dev libgl1-mesa-dev libvulkan1 \
-    libgl1-mesa-glx libosmesa6 libosmesa6-dev libglew-dev mesa-utils && \
-    apt-get clean && \
-    apt-get autoremove -y && \
-    rm -rf /var/lib/apt/lists/* && \
-    mkdir /root/.ssh
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+RUN apt-get -y update \
+    && apt-get install --no-install-recommends -y \
+    libglu1-mesa-dev libgl1-mesa-dev libosmesa6-dev \
+    xvfb unzip patchelf ffmpeg cmake swig git\
+    && apt-get autoremove -y \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # environment variables
 ENV MUJOCO_GL egl
