@@ -9,7 +9,7 @@ USER root
 
 # coerce rebuild in only this nteb
 
-ARG LIBNVINFER=7.2.2 LIBNVINFER_MAJOR_VERSION=7 CUDA_VERSION=12.1
+ARG LIBNVINFER=7.2.2 LIBNVINFER_MAJOR_VERSION=7 CUDA_VERSION=11.8
 
 RUN apt-get update && \
   apt-get install -y \
@@ -30,14 +30,14 @@ RUN chmod 777 /etc/datahub-profile.d/*.sh /tmp/activate.sh
 # CUDA 11 
 # tf requirements: https://www.tensorflow.org/install/pip#linux
 RUN mamba install \
-  cudatoolkit=12.1 \
+  cudatoolkit=11.8 \
   nccl \
   -y && \
   fix-permissions $CONDA_DIR && \
   fix-permissions /home/$NB_USER && \
   mamba clean -a -y
 
-RUN mamba install -c "nvidia/label/cuda-12.1.0" cuda-nvcc -y && \
+RUN mamba install -c "nvidia/label/cuda-11.8.0" cuda-nvcc -y && \
   fix-permissions $CONDA_DIR && \
   fix-permissions /home/$NB_USER && \
   mamba clean -a -y
