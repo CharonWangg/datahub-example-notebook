@@ -47,26 +47,6 @@ RUN mamba install -c "nvidia/label/cuda-11.8.0" cuda-nvcc -y && \
 # pip cache purge didnt work here for some reason.
 RUN pip install --no-cache-dir protobuf==3.20.3
 
-# cuda-python installed to have parity with tensorflow and cudnn
-# Install pillow<7 due to dependency issue https://github.com/pytorch/vision/issues/1712
-# tensorrt installed to fix not having libnvinfer that has caused tensorflow issues.
-# tensorrt installed to fix not having libnvinfer that has caused tensorflow issues.
-RUN pip install datascience \
-    PyQt5 \
-    scapy \
-    nltk \
-    opencv-contrib-python-headless \
-    opencv-python \
-    pycocotools \
-    pillow \
-    nvidia-cudnn-cu11==8.6.0.163 \
-    tensorflow==2.13.* \ 
-    keras==2.13.1 \
-    tensorflow-datasets \
-    tensorrt==8.5.3.1 && \
-    fix-permissions $CONDA_DIR && \ 
-    fix-permissions /home/$NB_USER && \
-    pip cache purge
     # no purge required but no-cache-dir is used. pip purge will actually break the build here!
 
 USER $NB_UID:$NB_GID
