@@ -59,9 +59,6 @@ ENV PATH=${PATH}:/usr/local/nvidia/bin:/opt/conda/bin
 # then the gpu can be detected via CLI.
 #ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/conda/lib/python3.9/site-packages/nvidia/cudnn/lib
 
-# packages
-SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-
 RUN apt-get -y update \
     && apt-get install --no-install-recommends -y \
     libglu1-mesa-dev libgl1-mesa-dev libosmesa6-dev \
