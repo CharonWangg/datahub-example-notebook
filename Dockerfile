@@ -30,11 +30,3 @@ ENV MUJOCO_GL egl
 ENV MS2_ASSET_DIR /root/data
 ENV LD_LIBRARY_PATH /root/.mujoco/mujoco210/bin:${LD_LIBRARY_PATH}
 
-# mujoco (required for metaworld)
-RUN mkdir -p /root/.mujoco && \
-    wget https://www.tdmpc2.com/files/mjkey.txt && \
-    wget https://github.com/deepmind/mujoco/releases/download/2.1.0/mujoco210-linux-x86_64.tar.gz && \
-    tar -xzf mujoco210-linux-x86_64.tar.gz && \
-    rm mujoco210-linux-x86_64.tar.gz && \
-    mv mujoco210 /root/.mujoco/mujoco210 && \
-    mv mjkey.txt /root/.mujoco/mjkey.txt && \
