@@ -1,5 +1,5 @@
-ARG BASE_TAG=stable
-FROM ghcr.io/ucsd-ets/datascience-notebook:$BASE_TAG
+ARG BASE_TAG=latest
+FROM ghcr.io/ucsd-ets/datascience-notebook:2023.4-fix-rstudio-proxy
 
 USER root
 
@@ -14,18 +14,15 @@ ARG LIBNVINFER=7.2.2 LIBNVINFER_MAJOR_VERSION=7 CUDA_VERSION=11.8
 RUN apt-get update && \
   apt-get install -y \
   libtinfo5 build-essential && \
-  apt-get clean && rm -rf /var/lib/apt/lists/*
+  apt-get clean && rm -rf /var/lib/apt/lists/* \
 
-RUN apt-get -y update && \
-    apt-get install -y --no-install-recommends build-essential git nano rsync vim tree curl \
-    wget unzip htop tmux xvfb patchelf ca-certificates bash-completion libjpeg-dev libpng-dev \
-    ffmpeg cmake swig libssl-dev libcurl4-openssl-dev libopenmpi-dev python3-dev zlib1g-dev \
-    qtbase5-dev qtdeclarative5-dev libglib2.0-0 libglu1-mesa-dev libgl1-mesa-dev libvulkan1 \
-    libgl1-mesa-glx libosmesa6 libosmesa6-dev libglew-dev mesa-utils && \
-    apt-get clean && \
-    apt-get autoremove -y && \
-    rm -rf /var/lib/apt/lists/* && \
-    mkdir /root/.ssh
+RUN apt-get -y update \
+    && apt-get install --no-install-recommends -y \
+    libglu1-mesa-dev libgl1-mesa-dev libosmesa6-dev \
+    xvfb unzip patchelf ffmpeg cmake swig git\
+    && apt-get autoremove -y \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # Symbolic link for Stata 17 dependency on libncurses5
 RUN ln -s libncurses.so.6 /usr/lib/x86_64-linux-gnu/libncurses.so.5
@@ -33,22 +30,34 @@ RUN ln -s libncurses.so.6 /usr/lib/x86_64-linux-gnu/libncurses.so.5
 COPY run_jupyter.sh /
 RUN chmod +x /run_jupyter.sh
 
+# TODO: Investigate which of these are needed
 COPY cudatoolkit_env_vars.sh cudnn_env_vars.sh tensorrt_env_vars.sh /etc/datahub-profile.d/
 COPY activate.sh /tmp/activate.sh
+COPY workflow_tests /opt/workflow_tests
+ADD manual_tests /opt/manual_tests
 
 RUN chmod 777 /etc/datahub-profile.d/*.sh /tmp/activate.sh
 
-# CUDA 11 
+RUN apt update && apt install -y wget && \
+    wget https://developer.download.nvidia.com/compute/cuda/repos/debian11/x86_64/libcudnn8_8.9.6.50-1+cuda11.8_amd64.deb && \
+    dpkg -i libcudnn8_8.9.6.50-1+cuda11.8_amd64.deb && \
+    rm libcudnn8_8.9.6.50-1+cuda11.8_amd64.deb && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN usermod -aG root jovyan
+USER jovyan
+
+# CUDA 11.8
 # tf requirements: https://www.tensorflow.org/install/pip#linux
-RUN mamba install \
-  cudatoolkit=11.8 \
-  nccl \
-  -y && \
+RUN mamba install -c "nvidia/label/cuda-11.8" cuda-nvcc -y && \
   fix-permissions $CONDA_DIR && \
   fix-permissions /home/$NB_USER && \
   mamba clean -a -y
 
-RUN mamba install -c "nvidia/label/cuda-11.8.0" cuda-nvcc -y && \
+#RUN mamba list | egrep '(cuda-version|nvidia/label/cuda)' | awk '{ print $1"=="$2;}' > public/envs/test3/conda-meta/pinned
+
+RUN mamba install nccl -c conda-forge -y && \
   fix-permissions $CONDA_DIR && \
   fix-permissions /home/$NB_USER && \
   mamba clean -a -y
@@ -56,28 +65,48 @@ RUN mamba install -c "nvidia/label/cuda-11.8.0" cuda-nvcc -y && \
 # install protobuf to avoid weird base type error. seems like if we don't then it'll be installed twice.
 # https://github.com/spesmilo/electrum/issues/7825
 # pip cache purge didnt work here for some reason.
+#RUN mamba install protobuf=3.20.3
 RUN pip install --no-cache-dir protobuf==3.20.3
+
+# Currently, opencv+tensorflow* are problematic with mamba...
 
 # cuda-python installed to have parity with tensorflow and cudnn
 # Install pillow<7 due to dependency issue https://github.com/pytorch/vision/issues/1712
 # tensorrt installed to fix not having libnvinfer that has caused tensorflow issues.
-# tensorrt installed to fix not having libnvinfer that has caused tensorflow issues.
-RUN pip install datascience \
-    PyQt5 \
-    scapy \
-    nltk \
-    opencv-contrib-python-headless \
+RUN pip install opencv-contrib-python-headless \
     opencv-python \
-    pycocotools \
-    pillow \
-    nvidia-cudnn-cu11==8.6.0.163 \
-    tensorflow==2.13.* \ 
-    keras==2.13.1 \
+    datascience \
+    nvidia-cudnn-cu11==8.9.6.50 \
+    tensorflow==2.14.0 \
     tensorflow-datasets \
-    tensorrt==8.5.3.1 && \
-    fix-permissions $CONDA_DIR && \ 
+    tensorrt==8.6.1 && \
+    fix-permissions $CONDA_DIR && \
     fix-permissions /home/$NB_USER && \
     pip cache purge
+
+# ntlk_data cannot currently be installed with mamba (while we have python 3.8).
+# datascience cannot be installed with mamba
+# The latest version of pytables, a dependency, only supports python 3.9 and up.
+# The latest compatible version (3.6.1) seems to be broken.
+# pytables is necessary, otherwise nltk will install out-of-date package
+# pytables on conda == tables on pip (???)
+# without pytables explicitly defined, version 3.6 will be installed (which seems to be broken when testing the import)
+
+RUN mamba install pyqt \
+  # datascience \
+  scapy \
+  nltk_data \
+  #opencv \
+  pycocotools \
+  pillow \
+  #tensorflow=2.13.1 \
+  #tensorflow-datasets \
+  keras=2.13.1 \
+  -c conda-forge && \
+  fix-permissions $CONDA_DIR && \
+  fix-permissions /home/$NB_USER && \
+  mamba clean -a -y
+
     # no purge required but no-cache-dir is used. pip purge will actually break the build here!
 
 # torch must be installed separately since it requires a non-pypi repo. See stable version above
@@ -87,7 +116,9 @@ RUN pip install datascience \
 # We already have the lib files imported into LD_LIBRARY_PATH by CUDDN and the cudatoolkit. let's remove these and save some image space.
 # Beware of potentially needing to update these if we update the drivers.
 RUN pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 && \
-  pip cache purge && \
+  fix-permissions $CONDA_DIR && \
+  fix-permissions /home/$NB_USER && \
+  mamba clean -a -y && \
   rm /opt/conda/lib/python3.9/site-packages/torch/lib/libcudnn_cnn_infer.so.8 && \
   rm /opt/conda/lib/python3.9/site-packages/torch/lib/libcublasLt.so.11 && \
   rm /opt/conda/lib/python3.9/site-packages/torch/lib/libcudnn_adv_infer.so.8 && \
@@ -109,7 +140,7 @@ ENV PATH=${PATH}:/usr/local/nvidia/bin:/opt/conda/bin
 
 # Do some CONDA/CUDA stuff
 # Copy libdevice file to the required path
-RUN mkdir -p $CONDA_DIR/lib/nvvm/libdevice && \
-  cp $CONDA_DIR/lib/libdevice.10.bc $CONDA_DIR/lib/nvvm/libdevice/
+#RUN mkdir -p $CONDA_DIR/lib/nvvm/libdevice && \
+#  cp $CONDA_DIR/lib/libdevice.10.bc $CONDA_DIR/lib/nvvm/libdevice/
 
 RUN . /tmp/activate.sh
