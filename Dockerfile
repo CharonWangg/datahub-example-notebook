@@ -146,7 +146,7 @@ ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/conda/lib/python3.9/site-packages/nv
 
 # Do some CONDA/CUDA stuff
 # Copy libdevice file to the required path
-RUN mkdir -p $CONDA_DIR/lib/nvvm/libdevice && \
-  cp $CONDA_DIR/lib/libdevice.10.bc $CONDA_DIR/lib/nvvm/libdevice/
+#RUN mkdir -p $CONDA_DIR/lib/nvvm/libdevice && \
+#  cp $CONDA_DIR/lib/libdevice.10.bc $CONDA_DIR/lib/nvvm/libdevice/
 
 RUN . /tmp/activate.sh
